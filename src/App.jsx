@@ -112,7 +112,7 @@ export default function RedconsApp() {
     (async () => {
             try {
         await authReady;
-        const snap = await getDoc(doc(db, "redcons", "datos"));
+        
         const snap = await getDoc(doc(db, "redcons", "datos"));
         if (snap.exists()) {
           const d = snap.data();

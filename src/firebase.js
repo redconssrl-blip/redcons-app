@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
+import { getAuth, signInAnonymously } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: "AIzaSyDHD94Bt_KiJz-rxjhlwWadkNQnn_th4sc",
@@ -12,3 +13,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
+export const auth = getAuth(app)
+
+// Inicia sesión anónima automáticamente. App.jsx espera esta promesa
+// antes de leer/escribir en Firestore, para que las reglas puedan exigir auth.
+export const authReady = signInAnonymously(auth).catch((e) => {
+  console.error("Error auth anónimo:", e)
+})

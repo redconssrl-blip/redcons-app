@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { db } from "./firebase.js";
+import { db, authReady } from "./firebase.js";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import {
@@ -110,7 +110,9 @@ export default function RedconsApp() {
 
   useEffect(() => {
     (async () => {
-      try {
+            try {
+        await authReady;
+        const snap = await getDoc(doc(db, "redcons", "datos"));
         const snap = await getDoc(doc(db, "redcons", "datos"));
         if (snap.exists()) {
           const d = snap.data();

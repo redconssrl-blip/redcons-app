@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { db, authReady } from "./firebase.js";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
+import Agenda from "./Agenda.jsx";
 import {
   Plus, Trash2, MapPin, Calendar, DollarSign, User, Search,
   Camera, X, Download, Wrench, Truck, Phone, FileText, ChevronLeft,
@@ -447,6 +448,7 @@ export default function RedconsApp() {
         <div className="flex gap-2 mb-6">
           <Tab id="trabajos" icon={ClipboardList} label="Trabajos" />
           <Tab id="clientes" icon={Users} label="Clientes" />
+          <Tab id="agenda" icon={Calendar} label="Agenda" />
           {esAdmin && <Tab id="precios" icon={Settings} label="Precios áridos" />}
         </div>
 
@@ -471,7 +473,7 @@ export default function RedconsApp() {
             <p className="ff-body text-xs text-[#5a6b62]">Los montos y precios están ocultos. Pedile el acceso de administrador a tu jefe si lo necesitás.</p>
           </div>
         )}
-
+{vista === "agenda" && <Agenda />}
         {vista === "precios" && esAdmin && (
           <div className="space-y-2">
             <div className="rounded-lg border border-[#3a4a42] bg-[#1c2722] p-4 mb-3">

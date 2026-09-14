@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
-import { getAuth, signInAnonymously } from 'firebase/auth'
+import { getAuth } from 'firebase/auth'
 import { getMessaging, getToken, isSupported } from 'firebase/messaging'
 
 const firebaseConfig = {
@@ -18,9 +18,6 @@ const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
 
-export const authReady = signInAnonymously(auth).catch((e) => {
-  console.error("Error auth anónimo:", e)
-})
 
 export async function pedirTokenPush() {
   try {

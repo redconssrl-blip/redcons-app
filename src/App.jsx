@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { db, authReady } from "./firebase.js";
+import { database, autenticacion } from "./firebase.js";
+import { onAuthStateChanged } from "firebase/auth";
+import Login from "./Login.jsx";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import Agenda from "./Agenda.jsx";

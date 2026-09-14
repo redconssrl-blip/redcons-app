@@ -110,11 +110,12 @@ export default function RedconsApp() {
   const [pinInput, setPinInput] = useState("");
   const [errorPin, setErrorPin] = useState("");
   const fileInputRef = useRef(null);
+  const [usuario, setUsuario] = useState(undefined);
 
   useEffect(() => {
     (async () => {
             try {
-        await authReady;
+        
         
         const snap = await getDoc(doc(db, "redcons", "datos"));
         if (snap.exists()) {
@@ -129,6 +130,10 @@ export default function RedconsApp() {
     })();
   }, []);
 
+useEffect(() => {
+  const unsub = onAuthStateChanged(autenticacion, (u) => setUsuario(u));
+  return unsub;
+}, []);
   async function guardarEnFirebase(campo, valor) {
     try {
       await setDoc(doc(db, "redcons", "datos"), { [campo]: valor }, { merge: true });
@@ -397,7 +402,12 @@ export default function RedconsApp() {
       <Icon size={14} /> {label}
     </button>
   );
-
+if (usuario === undefined) {
+  return <div className="min-h-screen bg-[#16201c] flex items-center justify-center"><p className="text-[#d9cba8] font-mono text-sm">Cargando...</p></div>;
+}
+if (!usuario) {
+  return <Login />;
+}
   return (
     <div className="min-h-screen bg-[#16201c] text-[#ece4cf]">
       <style>{`

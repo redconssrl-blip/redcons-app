@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { database, autenticacion } from "./firebase.js";
+import { database, auth } from "./firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import Login from "./Login.jsx";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -131,7 +131,7 @@ export default function RedconsApp() {
   }, []);
 
 useEffect(() => {
-  const unsub = onAuthStateChanged(autenticacion, (u) => setUsuario(u));
+  const unsub = onAuthStateChanged(auth, (u) => setUsuario(u));
   return unsub;
 }, []);
   async function guardarEnFirebase(campo, valor) {

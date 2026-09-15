@@ -19,6 +19,11 @@ export default function Agenda() {
     });
     return unsub;
   }, []);
+    useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      activarNotificaciones();
+    }
+  }, []);
 
   async function activarNotificaciones() {
     setPushEstado("activando");

@@ -23,8 +23,11 @@ export async function pedirTokenPush() {
   try {
     const soportado = await isSupported()
     if (!soportado) return null
-    const permiso = await Notification.requestPermission()
-    if (permiso !== "granted") return null
+        let permiso = Notification.permission
+    if (permiso === "default") {
+      permiso = await Notification.requestPermission()
+    }
+          if (permiso !== "granted") return null
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js")
     const messaging = getMessaging(app)
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })

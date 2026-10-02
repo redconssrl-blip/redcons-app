@@ -22,10 +22,11 @@ const ESTADOS_PAGO_EMOJI = { pagado: "🟢 Pagado", parcial: "🟡 Pago parcial"
 const colorEstado = { pagado: "#22c55e", parcial: "#eab308", pendiente: "#ef4444" };
 const IVA = 0.21;
 const MASTER_PIN = "419930188";
+const fmtFecha = (f) => { const m = String(f || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || ""); };"Días trabajados": t.tipo === "Venta de áridos" ? "-" : maquinasLista.map((l) => l.dias || 1).join(", "),
 
 const EMPTY_CLIENTE = { nombre: "", telefono: "", email: "", direccion: "" };
 const EMPTY_ARIDO_LINEA = { arido: ARIDOS[0], m3: "" };
-const EMPTY_MAQUINA_LINEA = { maquina: MAQUINAS[0], operador: "", costo: "", costoViaje: "", cantViajes: "" };
+const EMPTY_MAQUINA_LINEA = { maquina: MAQUINAS[0], operador: "", costo: "", costoViaje: "", cantViajes: "1", dias: "1" };
 const EMPTY_TRABAJO = {
   clienteId: "", fecha: "", lugar: "", trabajo: "", tipo: TIPOS_TRABAJO[0],
   maquinas: [{ ...EMPTY_MAQUINA_LINEA }], aridos: [{ ...EMPTY_ARIDO_LINEA }], remito: "",
@@ -76,7 +77,7 @@ function calcularCostoArido(precios, arido, m3) {
 
 function calcularCostoTotalMaquinas(lineas) {
   const total = (lineas || []).reduce((s, l) => {
-    const costo = Number(l.costo || 0);
+        const costo = Number(l.costo || 0) * (Number(l.dias) || 1);
     const viaje = l.maquina === "Camión" ? Number(l.costoViaje || 0) * Number(l.cantViajes || 0) : 0;
     return s + costo + viaje;
   }, 0);
@@ -209,7 +210,7 @@ useEffect(() => {
   function editarTrabajo(t) {
     if (!esAdmin) return;
     const aridos = t.aridos && t.aridos.length ? t.aridos : (t.arido ? [{ arido: t.arido, m3: t.m3 || "" }] : [{ ...EMPTY_ARIDO_LINEA }]);
-    const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ maquina: t.maquina, operador: t.operador || "", costo: "", costoViaje: "", cantViajes: "" }] : [{ ...EMPTY_MAQUINA_LINEA }]);
+const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ maquina: t.maquina, operador: t.operador || "", costo: "", costoViaje: "", cantViajes: "", dias: "1" }] : [{ ...EMPTY_MAQUINA_LINEA }]);
     setFormTrabajo({ ...EMPTY_TRABAJO, ...t, aridos, maquinas, estadoTrabajo: t.estadoTrabajo || "realizado", costo: String(t.costo ?? ""), pago: String(t.pago ?? "") });
     setEditandoId(t.id);
     setVista("trabajos");
@@ -270,7 +271,7 @@ useEffect(() => {
   function filaTrabajo(t, cli) {
     const maquinasLista = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ maquina: t.maquina, operador: t.operador || "", costo: t.costo, costoViaje: "" }] : []);
     const detalleCostos = t.tipo === "Venta de áridos" ? "" :
-      maquinasLista.map((l) => `${l.maquina}: $${Number(l.costo || 0).toLocaleString("es-AR")}${l.maquina === "Camión" && l.costoViaje ? ` + ${l.cantViajes || 0} viaje(s) x $${Number(l.costoViaje || 0).toLocaleString("es-AR")} = $${(Number(l.costoViaje || 0) * Number(l.cantViajes || 0)).toLocaleString("es-AR")}` : ""}`).join(" | ");
+      maquinasLista.map((l) => `${l.maquina}${Number(l.dias) > 1 ? ` (${l.dias} días)` : ""}: $${(Number(l.costo || 0) * (Number(l.dias) || 1)).toLocaleString("es-AR")}${l.maquina === "Camión" && l.costoViaje ? ` + ${l.cantViajes || 0} viaje(s) x $${Number(l.costoViaje || 0).toLocaleString("es-AR")} = $${(Number(l.costoViaje || 0) * Number(l.cantViajes || 0)).toLocaleString("es-AR")}` : ""}`).join(" | ");
     return {
       "N° Cliente": cli?.numero ?? "", Cliente: cli?.nombre ?? "Eliminado", Teléfono: cli?.telefono ?? "",
       Email: cli?.email ?? "", "Dirección cliente": cli?.direccion ?? "",
@@ -387,12 +388,58 @@ useEffect(() => {
     wsBuscador["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 6, hidden: true }];
     wsBuscador["!ref"] = `A1:K${filaInicio + maxFilas}`;
     XLSX.utils.book_append_sheet(wb, wsBuscador, "Buscador");
+        // Una solapa por cliente
+    const usados = new Set(["datos", "buscador"]);
+    const porCliente = {};
+    XLSX.utils.sheet_to_json(wsDatos).forEach((fila) => {
+      const k = `${fila["N° Cliente"]}|${fila["Cliente"] ?? ""}`;
+      (porCliente[k] = porCliente[k] || []).push(fila);
+    });
+    Object.entries(porCliente).forEach(([k, lista]) => {
+      const [nro, nombre] = k.split("|");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lista), nombreHojaUnico(`${nro} ${nombre}`, usados));
+    });
+      // Una solapa por cliente
+  const filasDatos = XLSX.utils.sheet_to_json(wb.Sheets["Datos"]);
+  const usados = new Set(["datos", "buscador"]);
+  const porCliente = {};
+  filasDatos.forEach(r => {
+    const k = `${r["N° Cliente"]}|${r["Cliente"] ?? ""}`;
+    (porCliente[k] = porCliente[k] || []).push(r);
+  });
+  Object.entries(porCliente).forEach(([k, trabajos]) => {
+    const [nro, nombre] = k.split("|");
+    const base = `${nro} ${nombre}`.replace(/[\\\/\?\*\[\]:]/g, "-").trim().slice(0, 28) || "Cliente";
+    let nom = base, i = 2;
+    while (usados.has(nom.toLowerCase())) nom = `${base.slice(0, 26)} ${i++}`;
+    usados.add(nom.toLowerCase());
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(trabajos), nom);
+  });
     wb.Workbook = { Sheets: [{ Hidden: 0 }, { Hidden: 0 }], activeTab: 1 };
 
     XLSX.writeFile(wb, `redcons_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  if (loading) {
+      if (loading) {
+    return <div className="min-h-screen bg-[#16201c] flex items-center justify-center"><p className="text-[#d9cba8] font-mono text-sm">cargando...</p></div>;
+  }
+  }
+    // Una solapa por cliente
+const filasDatos = XLSX.utils.sheet_to_json(wb.Sheets["Datos"]);
+const usados = new Set(["datos", "buscador"]);
+const porCliente = {};
+filasDatos.forEach(r => {
+  const k = `${r["N° Cliente"]}|${r["Cliente"] ?? ""}`;
+  (porCliente[k] = porCliente[k] || []).push(r);
+});
+Object.entries(porCliente).forEach(([k, trabajos]) => {
+  const [nro, nombre] = k.split("|");
+  const base = `${nro} ${nombre}`.replace(/[\\\/\?\*\[\]:]/g, "-").trim().slice(0, 28) || "Cliente";
+  let nom = base, i = 2;
+  while (usados.has(nom.toLowerCase())) nom = `${base.slice(0, 26)} ${i++}`;
+  usados.add(nom.toLowerCase());
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(trabajos), nom);
+});
     return <div className="min-h-screen bg-[#16201c] flex items-center justify-center"><p className="text-[#d9cba8] font-mono text-sm">cargando...</p></div>;
   }
 
@@ -726,7 +773,14 @@ if (!usuario) {
                             setFormTrabajo({ ...formTrabajo, maquinas: nuevasLineas });
                           }} />
                       </div>
-
+                      <div className="flex items-center gap-2 bg-[#16201c] border border-[#3a4a42] rounded-md px-3 py-2 focus-within:border-[#8fae9c]">
+                        <Calendar size={15} className="text-[#8fae9c] shrink-0" />
+                        <input type="number" min="1" className="bg-transparent outline-none w-full ff-mono text-sm placeholder:text-[#5a6b62]" placeholder="Días trabajados"
+                          value={linea.dias ?? "1"} onChange={(e) => {
+                            const nuevasLineas = formTrabajo.maquinas.map((l, idx) => (idx === i ? { ...l, dias: e.target.value } : l));
+                            setFormTrabajo({ ...formTrabajo, maquinas: nuevasLineas, costo: calcularCostoTotalMaquinas(nuevasLineas) });
+                          }} />
+                      </div>
                       {linea.maquina === "Camión" && (
                         <div className="flex items-center gap-2 bg-[#16201c] border border-[#3a4a42] rounded-md px-3 py-2 focus-within:border-[#8fae9c]">
                           <Truck size={15} className="text-[#8fae9c] shrink-0" />
@@ -960,7 +1014,7 @@ function TarjetaTrabajo({ t, mostrarCliente, nombreCliente, esAdmin, onEliminar,
                   ))
                 : (t.arido && <span className="ff-mono text-[10px] px-1.5 py-0.5 rounded-full bg-[#16201c] border border-[#3a4a42] text-[#e6c178]">{t.arido} {t.m3 ? `· ${t.m3} m³` : ""}</span>))
             : maquinasLista.map((l, i) => l.maquina && (
-                <span key={i} className="ff-mono text-[10px] px-1.5 py-0.5 rounded-full bg-[#16201c] border border-[#3a4a42] text-[#e6c178]">{l.maquina}</span>
+                <span key={i} className="ff-mono text-[10px] px-1.5 py-0.5 rounded-full bg-[#16201c] border border-[#3a4a42] text-[#e6c178]">{l.maquina}{Number(l.dias) > 1 ? ` · ${l.dias} días` : ""}</span>
               ))}
           {maquinasLista.filter((l) => l.operador).map((l, i) => (
             <span key={`op-${i}`} className="ff-mono text-[10px] px-1.5 py-0.5 rounded-full bg-[#16201c] border border-[#3a4a42] text-[#8fae9c] flex items-center gap-1"><HardHat size={10} /> {l.operador}</span>

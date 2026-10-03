@@ -22,8 +22,7 @@ const ESTADOS_PAGO_EMOJI = { pagado: "🟢 Pagado", parcial: "🟡 Pago parcial"
 const colorEstado = { pagado: "#22c55e", parcial: "#eab308", pendiente: "#ef4444" };
 const IVA = 0.21;
 const MASTER_PIN = "419930188";
-const fmtFecha = (f) => { const m = String(f || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || ""); };"Días trabajados": t.tipo === "Venta de áridos" ? "-" : maquinasLista.map((l) => l.dias || 1).join(", "),
-
+const fmtFecha = (f) => { const m = String(f || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || ""); };
 const EMPTY_CLIENTE = { nombre: "", telefono: "", email: "", direccion: "" };
 const EMPTY_ARIDO_LINEA = { arido: ARIDOS[0], m3: "" };
 const EMPTY_MAQUINA_LINEA = { maquina: MAQUINAS[0], operador: "", costo: "", costoViaje: "", cantViajes: "1", dias: "1" };
@@ -386,7 +385,7 @@ const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ 
     }
 
     wsBuscador["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 6, hidden: true }];
-    wsBuscador["!ref"] = `A1:K${filaInicio + maxFilas}`;
+      wsBuscador["!ref"] = `A1:K${filaInicio + maxFilas}`;
     XLSX.utils.book_append_sheet(wb, wsBuscador, "Buscador");
         // Una solapa por cliente
     const usados = new Set(["datos", "buscador"]);
@@ -399,51 +398,17 @@ const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ 
       const [nro, nombre] = k.split("|");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lista), nombreHojaUnico(`${nro} ${nombre}`, usados));
     });
-      // Una solapa por cliente
-  const filasDatos = XLSX.utils.sheet_to_json(wb.Sheets["Datos"]);
-  const usados = new Set(["datos", "buscador"]);
-  const porCliente = {};
-  filasDatos.forEach(r => {
-    const k = `${r["N° Cliente"]}|${r["Cliente"] ?? ""}`;
-    (porCliente[k] = porCliente[k] || []).push(r);
-  });
-  Object.entries(porCliente).forEach(([k, trabajos]) => {
-    const [nro, nombre] = k.split("|");
-    const base = `${nro} ${nombre}`.replace(/[\\\/\?\*\[\]:]/g, "-").trim().slice(0, 28) || "Cliente";
-    let nom = base, i = 2;
-    while (usados.has(nom.toLowerCase())) nom = `${base.slice(0, 26)} ${i++}`;
-    usados.add(nom.toLowerCase());
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(trabajos), nom);
-  });
+
     wb.Workbook = { Sheets: [{ Hidden: 0 }, { Hidden: 0 }], activeTab: 1 };
 
     XLSX.writeFile(wb, `redcons_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-      if (loading) {
-    return <div className="min-h-screen bg-[#16201c] flex items-center justify-center"><p className="text-[#d9cba8] font-mono text-sm">cargando...</p></div>;
-  }
-  }
-    // Una solapa por cliente
-const filasDatos = XLSX.utils.sheet_to_json(wb.Sheets["Datos"]);
-const usados = new Set(["datos", "buscador"]);
-const porCliente = {};
-filasDatos.forEach(r => {
-  const k = `${r["N° Cliente"]}|${r["Cliente"] ?? ""}`;
-  (porCliente[k] = porCliente[k] || []).push(r);
-});
-Object.entries(porCliente).forEach(([k, trabajos]) => {
-  const [nro, nombre] = k.split("|");
-  const base = `${nro} ${nombre}`.replace(/[\\\/\?\*\[\]:]/g, "-").trim().slice(0, 28) || "Cliente";
-  let nom = base, i = 2;
-  while (usados.has(nom.toLowerCase())) nom = `${base.slice(0, 26)} ${i++}`;
-  usados.add(nom.toLowerCase());
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(trabajos), nom);
-});
+  if (loading) {
     return <div className="min-h-screen bg-[#16201c] flex items-center justify-center"><p className="text-[#d9cba8] font-mono text-sm">cargando...</p></div>;
   }
 
-  const Tab = ({ id, icon: Icon, label }) => (
+    const Tab = ({ id, icon: Icon, label }) => (
     <button onClick={() => { setVista(id); setClienteSeleccionado(null); }}
       className={`flex items-center gap-1.5 ff-mono text-xs px-3 py-2 rounded-md border transition-colors ${vista === id ? "bg-[#8fae9c] text-[#16201c] border-[#8fae9c]" : "border-[#3a4a42] text-[#8fae9c] hover:border-[#8fae9c]"}`}>
       <Icon size={14} /> {label}

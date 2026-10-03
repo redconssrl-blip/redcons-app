@@ -3,7 +3,7 @@ import { db, auth } from "./firebase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import Login from "./Login.jsx";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import Agenda from "./Agenda.jsx";
 import {
   Plus, Trash2, MapPin, Calendar, DollarSign, User, Search,
@@ -23,6 +23,34 @@ const colorEstado = { pagado: "#22c55e", parcial: "#eab308", pendiente: "#ef4444
 const IVA = 0.21;
 const MASTER_PIN = "419930188";
 const fmtFecha = (f) => { const m = String(f || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : (f || ""); };
+const estiloPago = (estado) => {
+  const e = String(estado || "").toLowerCase();
+  let rgb = null;
+  if (e.includes("parcial")) rgb = "FFEB84";
+  else if (e.includes("pend")) rgb = "FF7C80";
+  else if (e.includes("pag")) rgb = "63BE7B";
+  if (!rgb) return undefined;
+  return {
+    fill: { patternType: "solid", fgColor: { rgb } },
+    font: { bold: true },
+    alignment: { horizontal: "center" },
+  };
+};
+
+const pintarEstados = (ws, nombreColumna = "Estado") => {
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  let col = -1;
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const h = ws[XLSX.utils.encode_cell({ r: 0, c })];
+    if (h && h.v === nombreColumna) col = c;
+  }
+  if (col < 0) return;
+  for (let r = 1; r <= range.e.r; r++) {
+    const cell = ws[XLSX.utils.encode_cell({ r, c: col })];
+    const s = cell && estiloPago(cell.v);
+    if (s) cell.s = s;
+  }
+};
 const EMPTY_CLIENTE = { nombre: "", telefono: "", email: "", direccion: "" };
 const EMPTY_ARIDO_LINEA = { arido: ARIDOS[0], m3: "" };
 const EMPTY_MAQUINA_LINEA = { maquina: MAQUINAS[0], operador: "", costo: "", costoViaje: "", cantViajes: "1", dias: "1" };
@@ -274,7 +302,7 @@ const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ 
     return {
       "N° Cliente": cli?.numero ?? "", Cliente: cli?.nombre ?? "Eliminado", Teléfono: cli?.telefono ?? "",
       Email: cli?.email ?? "", "Dirección cliente": cli?.direccion ?? "",
-      Fecha: t.fecha, "Dirección trabajo": t.lugar, Tipo: t.tipo,
+             Fecha: fmtFecha(t.fecha), "Dirección trabajo": t.lugar, Tipo: t.tipo,
       "Estado trabajo": t.estadoTrabajo === "agendado" ? "Agendado" : "Realizado",
       Maquinaria: t.tipo === "Venta de áridos" ? "-" : maquinasLista.map((l) => l.maquina).join(", "),
       Operador: t.tipo === "Venta de áridos" ? "-" : maquinasLista.map((l) => l.operador).filter(Boolean).join(", "),
@@ -286,7 +314,7 @@ const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ 
       "Costo con IVA ($)": t.conIva ? Math.round(Number(t.costo || 0) * (1 + IVA)) : Number(t.costo || 0),
       "Pagado ($)": Number(t.pago || 0),
       "Saldo ($)": totalACobrar(t.costo, t.conIva) - Number(t.pago || 0),
-      Estado: ESTADOS_PAGO_EMOJI[estadoPago(t.costo, t.pago, t.conIva)],
+     Estado:  ESTADOS_PAGO[estadoPago(t.costo, t.pago, t.conIva)],
     };
   }
 
@@ -321,6 +349,7 @@ const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ 
     });
     const wsDatos = XLSX.utils.aoa_to_sheet([cabecera, ...filasDatos]);
     wsDatos["!cols"] = Array(cabecera.length).fill({ wch: 14 });
+    pintarEstados(wsDatos);
     XLSX.utils.book_append_sheet(wb, wsDatos, "Datos");
 
     const ultimaFilaDatos = filasDatos.length + 1; // fila 1 es cabecera
@@ -396,7 +425,7 @@ const maquinas = t.maquinas && t.maquinas.length ? t.maquinas : (t.maquina ? [{ 
     });
     Object.entries(porCliente).forEach(([k, lista]) => {
       const [nro, nombre] = k.split("|");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lista), nombreHojaUnico(`${nro} ${nombre}`, usados));
+      XLSX.utils.book_append_sheet(wb, (() => { const w = XLSX.utils.json_to_sheet(lista); pintarEstados(w); return w; })(), nombreHojaUnico(`${nro} ${nombre}`, usados));
     });
 
     wb.Workbook = { Sheets: [{ Hidden: 0 }, { Hidden: 0 }], activeTab: 1 };
